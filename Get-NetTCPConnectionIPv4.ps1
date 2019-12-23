@@ -104,5 +104,3 @@ attemps to resovle the remote IP addresses to host names.
     End{}
 }
 
-'localhost' | Get-NetTCPConnectionIPv4 -IPresolve
-
