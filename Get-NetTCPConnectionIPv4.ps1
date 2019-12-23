@@ -45,11 +45,8 @@ attemps to resovle the remote IP addresses to host names.
             #Get all processes
             $processes = Get-Process
 
-            
-        
             foreach($TCPconnection in $TCPconnections) {
                 $IPresolver =""
-                
                 
                 #Match process Id to process name
                 $OwningProcess = $processes | where -Property Id -EQ $TCPconnection.OwningProcess
@@ -103,4 +100,3 @@ attemps to resovle the remote IP addresses to host names.
     }
     End{}
 }
-
