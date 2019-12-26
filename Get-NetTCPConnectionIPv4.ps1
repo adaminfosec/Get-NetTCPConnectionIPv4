@@ -33,23 +33,30 @@ attemps to resovle the remote IP addresses to host names.
     Begin{}
     Process{
         foreach ($computer in $ComputerName) {
-            $date = Get-Date
+            Write-Verbose "Querying $computer"
+            
+            $date = Get-CimInstance Win32_OperatingSystem -ComputerName $computer | select -Property LocalDateTime
 
-            $localIPv4 = Get-NetIPConfiguration
+            $userAccount = Get-CimInstance Win32_UserAccount -ComputerName $computer | Where-Object -FilterScript {$_.Status -eq 'OK'}
 
-            $TCPconnections = Get-NetTCPConnection -State Established, Listen -LocalAddress $localIPv4[0].IPv4Address.IPAddress | 
-                              Select-Object -Property @{l='ComputerName';e={($env:COMPUTERNAME)}}, 
-                              localAddress, localPort, RemoteAddress, RemotePort, State, OwningProcess, 
-                              CreationTime, @{l='ConnectionAge';e={New-TimeSpan -Start $_.CreationTime -End $date}} |
-                              Where-Object -Property RemoteAddress -NE 0.0.0.0
+            $localIPv4 = Get-CimInstance Win32_NetworkAdapterConfiguration -ComputerName $computer | Where-Object -FilterScript {$_.DNSDomain -ne $null} | 
+                         Select-Object -Property ipaddress
+
+            $cimTCPconnections = Get-CimInstance -Namespace ROOT\StandardCIMV2 -Class MSFT_NetTCPConnection -ComputerName $computer |
+                                 Where-Object -FilterScript {($_.State -eq 'Listen') -or ($_.State -eq 'Established') -and ($_.LocalAddress -eq $localIPv4.ipaddress[0])} |
+                                 Select-Object -Property @{l='ComputerName';e={$env:COMPUTERNAME}}, localAddress, localPort, RemoteAddress, RemotePort,
+                                 State, OwningProcess, CreationTime, @{l='ConnectionAge';e={New-TimeSpan -Start $_.CreationTime -End $date.LocalDateTime}}
+            
             #Get all processes
-            $processes = Get-Process
+            $processes = Get-CimInstance Win32_Process -ComputerName localhost
+            
+            Write-Verbose "Cim queries complete"
 
-            foreach($TCPconnection in $TCPconnections) {
+            foreach($TCPconnection in $cimTCPconnections) {
                 $IPresolver =""
                 
                 #Match process Id to process name
-                $OwningProcess = $processes | where -Property Id -EQ $TCPconnection.OwningProcess
+                $OwningProcess = $processes | where -Property ProcessId -EQ $TCPconnection.OwningProcess
 
                 #Assign the port name
                 $portName = ""
@@ -63,7 +70,7 @@ attemps to resovle the remote IP addresses to host names.
                 }
             
                 #Build connection object
-                $props = @{'UserAccount'=$env:USERNAME;
+                $props = @{'UserAccount'=$userAccount.Name;
                            'ComputerName'=$TCPconnection.ComputerName;
                            'localAddress'=$TCPconnection.localAddress;
                            'localPort'=$TCPconnection.localPort;
