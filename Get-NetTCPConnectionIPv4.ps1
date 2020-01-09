@@ -55,6 +55,12 @@ attemps to resovle the remote IP addresses to host names.
             foreach($TCPconnection in $cimTCPconnections) {
                 $IPresolver =""
                 
+                if ($TCPconnection.State -eq 5) {
+                    $state = 'Established'
+                } else {
+                    $state = 'Listening'
+                }
+
                 #Match process Id to process name
                 $OwningProcess = $processes | where -Property ProcessId -EQ $TCPconnection.OwningProcess
 
@@ -77,7 +83,7 @@ attemps to resovle the remote IP addresses to host names.
                            'RemoteAddress'=$TCPconnection.RemoteAddress;
                            'RemotePort'=$TCPconnection.RemotePort;
                            'RemotePortName'=$portName;
-                           'State'=$TCPconnection.State;
+                           'State'=$state;
                            'OwningProcessID'=$TCPconnection.OwningProcess;
                            'OwningProcess'=$OwningProcess.ProcessName;
                            'OwningProcessPath'=$OwningProcess.path;
@@ -99,7 +105,8 @@ attemps to resovle the remote IP addresses to host names.
                     #if the IP is resolved then add the property
                     if ($IPresolver) {
                         $obj | Add-Member -MemberType NoteProperty -Name 'RemoteHostName' -Value $IPresolver.HostName
-                    }
+                        
+                    } 
                 }
 
                 Write-Output $obj
