@@ -43,8 +43,8 @@ attemps to resovle the remote IP addresses to host names.
                          Select-Object -Property ipaddress
 
             $cimTCPconnections = Get-CimInstance -Namespace ROOT\StandardCIMV2 -Class MSFT_NetTCPConnection -ComputerName $computer |
-                                 Where-Object -FilterScript {($_.State -eq 'Listen') -or ($_.State -eq 'Established') -and ($_.LocalAddress -eq $localIPv4.ipaddress[0])} |
-                                 Select-Object -Property @{l='ComputerName';e={$env:COMPUTERNAME}}, localAddress, localPort, RemoteAddress, RemotePort,
+                                 Where-Object -FilterScript {($_.State -eq 2) -or ($_.State -eq 5) -and ($_.LocalAddress -eq $localIPv4.ipaddress[0])} |
+                                 Select-Object -Property @{l='ComputerName';e={$_.PSComputerName}}, localAddress, localPort, RemoteAddress, RemotePort,
                                  State, OwningProcess, CreationTime, @{l='ConnectionAge';e={New-TimeSpan -Start $_.CreationTime -End $date.LocalDateTime}}
             
             #Get all processes
@@ -86,7 +86,8 @@ attemps to resovle the remote IP addresses to host names.
                         }
             
                 $obj = New-Object -TypeName PSObject -Property $props
-                
+                $obj.PSObject.TypeNames.Insert(0,'AdamInfoSec.ironscripter.TCPipv4')
+
                 #Attempt to resolve IP to host name
                 if ($IPresolve) {
                     Try {
